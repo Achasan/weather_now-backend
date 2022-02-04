@@ -7,13 +7,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @Slf4j
 @SpringBootTest
-public class TimeMapperTest {
+public class MyBatisTest {
 
     @Autowired
     private TimeMapper timeMapper;
 
-
-    // MyBatis, Oracle 연동 테스트 : select sysdate from dual
+    // MyBatis, Oracle 연동 테스트 : "select sysdate from dual"
     @Test
     public void loggingTime() {
         log.info("class Name is {}", timeMapper.getClass().getName());
