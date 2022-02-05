@@ -1,20 +1,19 @@
 package com.weathernow.server.controller;
 
-import com.fasterxml.jackson.databind.util.JSONPObject;
 import com.google.gson.*;
 import com.weathernow.server.domain.WeatherData;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.tomcat.util.json.JSONParser;
-import org.apache.tomcat.util.json.ParseException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -23,7 +22,7 @@ import java.util.List;
 public class APIController {
 
     @GetMapping("forecast")
-    public int forecast() throws IOException {
+    public List<WeatherData> forecast() throws IOException {
 
         URL url = buildURL();
 
@@ -43,38 +42,41 @@ public class APIController {
             sb.append(temp);
         }
 
-        System.out.println(sb);
-
         JsonObject jsonObject = (JsonObject) JsonParser.parseString(sb.toString());
         JsonObject parse_response = (JsonObject) jsonObject.get("response");
         JsonObject parse_body = (JsonObject) parse_response.get("body");
         JsonObject parse_items = (JsonObject) parse_body.get("items");
         JsonArray array = (JsonArray) parse_items.get("item");
 
+        List<WeatherData> weathers = new ArrayList<WeatherData>();
         for(int i=0; i<array.size(); i++) {
-            JsonObject item = (JsonObject) array.get(i);
+            JsonElement jsonElement = array.get(i);
 
-            System.out.println("category : " + item.get("category"));
+            Gson gson = new Gson();
+            WeatherData weatherData = gson.fromJson(jsonElement, WeatherData.class);
+
+            weathers.add(weatherData);
         }
-
-        System.out.println("parse_body = " + array.size());
 
         br.close();
         conn.disconnect();
 
-        return responseCode;
+        return weathers;
     }
 
     private URL buildURL() throws MalformedURLException {
         String endPointURI = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst";
 
+        String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmm"));
+
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(endPointURI)
                 .queryParam("serviceKey", "WIhsB06waJJMJZMm/M4SkVOW7q/e0dtIWgG/jNK9eovNSpJl2jaCpkaUOpX6SSgDd4CbGTXZNEeYzl0RZ9e2Sg==")
                 .queryParam("pageNo", "1")
-                .queryParam("numOfRows", "20")
+                .queryParam("numOfRows", "1000")
                 .queryParam("dataType", "JSON")
-                .queryParam("base_date", "20220204")
-                .queryParam("base_time", "0500")
+                .queryParam("base_date", date)
+                .queryParam("base_time", time)
                 .queryParam("nx", "36")
                 .queryParam("ny", "127");
 

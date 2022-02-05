@@ -13,7 +13,7 @@ public class WeatherData {
     private String category;
     private String fcstDate;
     private String fcstTime;
-    private int fcstValue;
+    private String fcstValue;
     private int nx;
     private int ny;
 }
