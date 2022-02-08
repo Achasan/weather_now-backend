@@ -44,6 +44,8 @@ public class APIController {
 
         JsonObject jsonObject = (JsonObject) JsonParser.parseString(sb.toString());
         JsonObject parse_response = (JsonObject) jsonObject.get("response");
+        // JsonElement parse_header = (JsonObject) jsonObject.get("header");
+
         JsonObject parse_body = (JsonObject) parse_response.get("body");
         JsonObject parse_items = (JsonObject) parse_body.get("items");
         JsonArray array = (JsonArray) parse_items.get("item");
@@ -68,17 +70,26 @@ public class APIController {
         String endPointURI = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst";
 
         String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmm"));
+        String hour = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH"));
+        String min = LocalDateTime.now().format(DateTimeFormatter.ofPattern("mm"));
+
+        // min이 30 미만일 경우 hour를 1 내림
+        if(Integer.parseInt(min) < 30) {
+            int modifiedHour = Integer.parseInt(hour) - 1;
+            hour = String.format("%02d", modifiedHour);
+        }
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(endPointURI)
                 .queryParam("serviceKey", "WIhsB06waJJMJZMm/M4SkVOW7q/e0dtIWgG/jNK9eovNSpJl2jaCpkaUOpX6SSgDd4CbGTXZNEeYzl0RZ9e2Sg==")
                 .queryParam("pageNo", "1")
-                .queryParam("numOfRows", "1000")
+                .queryParam("numOfRows", "60")
                 .queryParam("dataType", "JSON")
                 .queryParam("base_date", date)
-                .queryParam("base_time", time)
+                .queryParam("base_time", hour + min) // 30분 발표
                 .queryParam("nx", "36")
                 .queryParam("ny", "127");
+
+        log.info("Forcast Request URL = {}", builder.build().encode().toUri().toURL());
 
         return builder.build().encode().toUri().toURL();
     }
