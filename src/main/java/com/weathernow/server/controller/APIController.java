@@ -1,6 +1,7 @@
 package com.weathernow.server.controller;
 
 import com.google.gson.*;
+import com.weathernow.server.domain.UltraSrtFcst;
 import com.weathernow.server.domain.WeatherData;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -56,6 +57,7 @@ public class APIController {
 
             Gson gson = new Gson();
             WeatherData weatherData = gson.fromJson(jsonElement, WeatherData.class);
+            weatherData.setCategory(UltraSrtFcst.valueOf(weatherData.getCategory()).getName());
 
             weathers.add(weatherData);
         }

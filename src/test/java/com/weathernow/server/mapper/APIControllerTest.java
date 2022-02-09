@@ -1,12 +1,9 @@
 package com.weathernow.server.mapper;
 
+import com.weathernow.server.domain.VilageFcst;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 @Slf4j
 public class APIControllerTest {
@@ -22,5 +19,16 @@ public class APIControllerTest {
         }
 
         Assertions.assertThat(hour + min).isEqualTo("0902");
+    }
+
+    @Test
+    public void weatherCodeTest() {
+
+        //given
+        String name = "REH";
+
+        //then
+        Assertions.assertThat(VilageFcst.PCP.getName()).isEqualTo("1시간 강수량");
+        Assertions.assertThat(VilageFcst.valueOf(name).getName()).isEqualTo("습도");
     }
 }
