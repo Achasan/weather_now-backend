@@ -1,7 +1,7 @@
 package com.weathernow.server.controller;
 
 import com.google.gson.*;
-import com.weathernow.server.domain.UltraSrtFcst;
+import com.weathernow.server.enumeration.UltraSrtFcst;
 import com.weathernow.server.domain.WeatherData;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -57,7 +57,12 @@ public class APIController {
 
             Gson gson = new Gson();
             WeatherData weatherData = gson.fromJson(jsonElement, WeatherData.class);
+
+            ConvertController(weatherData);
+            weatherData.setFcstValue(weatherData.getFcstValue() +
+                    UltraSrtFcst.valueOf(weatherData.getCategory()).getUnit());
             weatherData.setCategory(UltraSrtFcst.valueOf(weatherData.getCategory()).getName());
+
 
             weathers.add(weatherData);
         }
@@ -95,4 +100,114 @@ public class APIController {
 
         return builder.build().encode().toUri().toURL();
     }
+
+    private void ConvertController(WeatherData weatherData) {
+        switch(weatherData.getCategory()) {
+            case "VEC":
+                VECConverter(weatherData);
+                break;
+            case "SKY":
+                SKYConverter(weatherData);
+                break;
+            case "PTY":
+                PTYConverter(weatherData);
+                break;
+        }
+    }
+
+    private String VECConverter(WeatherData weatherData) {
+        int value = Integer.parseInt(weatherData.getFcstValue());
+
+        if(value >= 0 && value <= 45) {
+
+            weatherData.setFcstValue("북-북동풍");
+
+        } else if(value >= 45 && value <= 90) {
+
+            weatherData.setFcstValue("북동-동풍");
+
+        } else if(value >= 90 && value <= 135) {
+
+            weatherData.setFcstValue("동-남동풍");
+
+        } else if(value >= 135 && value <= 180) {
+
+            weatherData.setFcstValue("남동-남풍");
+
+        } else if(value >= 180 && value <= 225) {
+
+            weatherData.setFcstValue("남-남서풍");
+
+        } else if(value >= 225 && value <= 270) {
+
+            weatherData.setFcstValue("남서-서풍");
+
+        } else if(value >= 270 && value <= 315) {
+
+            weatherData.setFcstValue("서-북서풍");
+
+        } else if(value >= 315 && value <= 360) {
+
+            weatherData.setFcstValue("북서-북풍");
+
+        }
+
+        return weatherData.getFcstValue();
+    }
+
+    private String SKYConverter(WeatherData weatherData) {
+        int value = Integer.parseInt(weatherData.getFcstValue());
+
+        if(value >= 0 && value <= 5) {
+
+            weatherData.setFcstValue("맑음");
+
+        } else if(value >= 6 && value <= 8) {
+
+            weatherData.setFcstValue("구름많음");
+
+        } else if(value >= 9 && value <= 10) {
+
+            weatherData.setFcstValue("흐림");
+        }
+
+        return weatherData.getFcstValue();
+    }
+
+    private String PTYConverter(WeatherData weatherData) {
+        int value = Integer.parseInt(weatherData.getFcstValue());
+
+        switch(value) {
+            case 0:
+                weatherData.setFcstValue("없음");
+                break;
+            case 1:
+                weatherData.setFcstValue("비");
+                break;
+            case 2:
+                weatherData.setFcstValue("비/눈");
+                break;
+            case 3:
+                weatherData.setFcstValue("눈");
+                break;
+            case 4:
+                weatherData.setFcstValue("소나기");
+                break;
+            case 5:
+                weatherData.setFcstValue("빗방울");
+                break;
+            case 6:
+                weatherData.setFcstValue("빗방울눈날림");
+                break;
+            case 7:
+                weatherData.setFcstValue("눈날림");
+                break;
+        }
+
+        return weatherData.getFcstValue();
+    }
+
+
+
+
 }

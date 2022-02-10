@@ -1,4 +1,4 @@
-package com.weathernow.server.domain;
+package com.weathernow.server.enumeration;
 
 public enum VilageFcst {
 

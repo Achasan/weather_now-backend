@@ -8,7 +8,6 @@ import lombok.ToString;
 @Setter
 @ToString
 public class WeatherData {
-    private String baseDate;
     private String baseTime;
     private String category;
     private String fcstDate;
