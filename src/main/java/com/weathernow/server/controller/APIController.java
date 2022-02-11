@@ -1,8 +1,8 @@
 package com.weathernow.server.controller;
 
 import com.google.gson.*;
-import com.weathernow.server.enumeration.UltraSrtFcst;
-import com.weathernow.server.domain.WeatherData;
+import com.weathernow.server.domain.NcstVO;
+import com.weathernow.server.enumeration.UltraSrt;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,13 +17,18 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * UltraSrtNcst : 초단기 실황
+ * UltraSrtFcst : 초단기 예보
+ */
+
 @Slf4j
 @RestController
 @RequestMapping("/api/")
 public class APIController {
 
-    @GetMapping("forecast")
-    public List<WeatherData> forecast() throws IOException {
+    @GetMapping("UltraSrtNcst")
+    public List<NcstVO> forecast() throws IOException {
 
         URL url = buildURL();
 
@@ -51,20 +56,19 @@ public class APIController {
         JsonObject parse_items = (JsonObject) parse_body.get("items");
         JsonArray array = (JsonArray) parse_items.get("item");
 
-        List<WeatherData> weathers = new ArrayList<WeatherData>();
+        List<NcstVO> weathers = new ArrayList<>();
         for(int i=0; i<array.size(); i++) {
             JsonElement jsonElement = array.get(i);
 
             Gson gson = new Gson();
-            WeatherData weatherData = gson.fromJson(jsonElement, WeatherData.class);
+            NcstVO ncstVO = gson.fromJson(jsonElement, NcstVO.class);
 
-            ConvertController(weatherData);
-            weatherData.setFcstValue(weatherData.getFcstValue() +
-                    UltraSrtFcst.valueOf(weatherData.getCategory()).getUnit());
-            weatherData.setCategory(UltraSrtFcst.valueOf(weatherData.getCategory()).getName());
+            ConvertController(ncstVO);
+            ncstVO.setObsrValue(ncstVO.getObsrValue() +
+                    UltraSrt.valueOf(ncstVO.getCategory()).getUnit());
+            ncstVO.setCategory(UltraSrt.valueOf(ncstVO.getCategory()).getName());
 
-
-            weathers.add(weatherData);
+            weathers.add(ncstVO);
         }
 
         br.close();
@@ -74,13 +78,12 @@ public class APIController {
     }
 
     private URL buildURL() throws MalformedURLException {
-        String endPointURI = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst";
+        String endPointURI = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst";
 
         String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String hour = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH"));
         String min = LocalDateTime.now().format(DateTimeFormatter.ofPattern("mm"));
 
-        // min이 30 미만일 경우 hour를 1 내림
         if(Integer.parseInt(min) < 30) {
             int modifiedHour = Integer.parseInt(hour) - 1;
             hour = String.format("%02d", modifiedHour);
@@ -92,119 +95,119 @@ public class APIController {
                 .queryParam("numOfRows", "60")
                 .queryParam("dataType", "JSON")
                 .queryParam("base_date", date)
-                .queryParam("base_time", hour + min) // 30분 발표
-                .queryParam("nx", "36")
-                .queryParam("ny", "127");
+                .queryParam("base_time", hour + "00") // 30분 발표
+                .queryParam("nx", "57")
+                .queryParam("ny", "128");
 
         log.info("Forcast Request URL = {}", builder.build().encode().toUri().toURL());
 
         return builder.build().encode().toUri().toURL();
     }
 
-    private void ConvertController(WeatherData weatherData) {
-        switch(weatherData.getCategory()) {
+    private void ConvertController(NcstVO ncstVO) {
+        switch(ncstVO.getCategory()) {
             case "VEC":
-                VECConverter(weatherData);
+                VECConverter(ncstVO);
                 break;
             case "SKY":
-                SKYConverter(weatherData);
+                SKYConverter(ncstVO);
                 break;
             case "PTY":
-                PTYConverter(weatherData);
+                PTYConverter(ncstVO);
                 break;
         }
     }
 
-    private String VECConverter(WeatherData weatherData) {
-        int value = Integer.parseInt(weatherData.getFcstValue());
+    private String VECConverter(NcstVO ncstVO) {
+        int value = Integer.parseInt(ncstVO.getObsrValue());
 
         if(value >= 0 && value <= 45) {
 
-            weatherData.setFcstValue("북-북동풍");
+            ncstVO.setObsrValue("북-북동풍");
 
         } else if(value >= 45 && value <= 90) {
 
-            weatherData.setFcstValue("북동-동풍");
+            ncstVO.setObsrValue("북동-동풍");
 
         } else if(value >= 90 && value <= 135) {
 
-            weatherData.setFcstValue("동-남동풍");
+            ncstVO.setObsrValue("동-남동풍");
 
         } else if(value >= 135 && value <= 180) {
 
-            weatherData.setFcstValue("남동-남풍");
+            ncstVO.setObsrValue("남동-남풍");
 
         } else if(value >= 180 && value <= 225) {
 
-            weatherData.setFcstValue("남-남서풍");
+            ncstVO.setObsrValue("남-남서풍");
 
         } else if(value >= 225 && value <= 270) {
 
-            weatherData.setFcstValue("남서-서풍");
+            ncstVO.setObsrValue("남서-서풍");
 
         } else if(value >= 270 && value <= 315) {
 
-            weatherData.setFcstValue("서-북서풍");
+            ncstVO.setObsrValue("서-북서풍");
 
         } else if(value >= 315 && value <= 360) {
 
-            weatherData.setFcstValue("북서-북풍");
+            ncstVO.setObsrValue("북서-북풍");
 
         }
 
-        return weatherData.getFcstValue();
+        return ncstVO.getObsrValue();
     }
 
-    private String SKYConverter(WeatherData weatherData) {
-        int value = Integer.parseInt(weatherData.getFcstValue());
+    private String SKYConverter(NcstVO ncstVO) {
+        int value = Integer.parseInt(ncstVO.getObsrValue());
 
         if(value >= 0 && value <= 5) {
 
-            weatherData.setFcstValue("맑음");
+            ncstVO.setObsrValue("맑음");
 
         } else if(value >= 6 && value <= 8) {
 
-            weatherData.setFcstValue("구름많음");
+            ncstVO.setObsrValue("구름많음");
 
         } else if(value >= 9 && value <= 10) {
 
-            weatherData.setFcstValue("흐림");
+            ncstVO.setObsrValue("흐림");
         }
 
-        return weatherData.getFcstValue();
+        return ncstVO.getObsrValue();
     }
 
-    private String PTYConverter(WeatherData weatherData) {
-        int value = Integer.parseInt(weatherData.getFcstValue());
+    private String PTYConverter(NcstVO ncstVO) {
+        int value = Integer.parseInt(ncstVO.getObsrValue());
 
         switch(value) {
             case 0:
-                weatherData.setFcstValue("없음");
+                ncstVO.setObsrValue("없음");
                 break;
             case 1:
-                weatherData.setFcstValue("비");
+                ncstVO.setObsrValue("비");
                 break;
             case 2:
-                weatherData.setFcstValue("비/눈");
+                ncstVO.setObsrValue("비/눈");
                 break;
             case 3:
-                weatherData.setFcstValue("눈");
+                ncstVO.setObsrValue("눈");
                 break;
             case 4:
-                weatherData.setFcstValue("소나기");
+                ncstVO.setObsrValue("소나기");
                 break;
             case 5:
-                weatherData.setFcstValue("빗방울");
+                ncstVO.setObsrValue("빗방울");
                 break;
             case 6:
-                weatherData.setFcstValue("빗방울눈날림");
+                ncstVO.setObsrValue("빗방울눈날림");
                 break;
             case 7:
-                weatherData.setFcstValue("눈날림");
+                ncstVO.setObsrValue("눈날림");
                 break;
         }
 
-        return weatherData.getFcstValue();
+        return ncstVO.getObsrValue();
     }
 
 

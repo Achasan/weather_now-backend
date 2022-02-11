@@ -7,12 +7,10 @@ import lombok.ToString;
 @Getter
 @Setter
 @ToString
-public class WeatherData {
+public class NcstVO {
     private String baseTime;
     private String category;
-    private String fcstDate;
-    private String fcstTime;
-    private String fcstValue;
+    private String obsrValue;
     private int nx;
     private int ny;
 }

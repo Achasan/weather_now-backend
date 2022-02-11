@@ -1,9 +1,9 @@
 package com.weathernow.server.enumeration;
 
 /**
- * 초단기예보 Enum
+ * UltraSrt (초단기 예보, 초단기 실황 같이 사용)
  */
-public enum UltraSrtFcst {
+public enum UltraSrt {
     T1H("기온", "℃"),
     RN1("1시간 강수량", "mm"),
     SKY("하늘상태", ""),
@@ -18,7 +18,7 @@ public enum UltraSrtFcst {
     private final String name;
     private final String unit;
 
-    UltraSrtFcst(String name, String unit) {
+    UltraSrt(String name, String unit) {
         this.name = name;
         this.unit = unit;
     }
