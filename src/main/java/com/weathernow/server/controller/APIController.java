@@ -1,6 +1,7 @@
 package com.weathernow.server.controller;
 
 import com.google.gson.*;
+import com.weathernow.server.domain.FcstVO;
 import com.weathernow.server.domain.NcstVO;
 import com.weathernow.server.enumeration.UltraSrt;
 import lombok.extern.slf4j.Slf4j;
@@ -14,8 +15,8 @@ import java.io.InputStreamReader;
 import java.net.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * UltraSrtNcst : 초단기 실황
@@ -27,18 +28,87 @@ import java.util.List;
 @RequestMapping("/api/")
 public class APIController {
 
-    @GetMapping("UltraSrtNcst")
-    public List<NcstVO> forecast() throws IOException {
+    private final String ncst = "getUltraSrtNcst";
+    private final String fcst = "getUltraSrtFcst";
 
-        URL url = buildURL();
+    @GetMapping("UltraSrtNcst")
+    public Map<String, String> forecast() throws IOException {
+
+        String ncstData = connect(ncst);
+        String fcstData = connect(fcst);
+
+        Map<String, String> ncstMap = parsingNcst(ncstData);
+        Map<String, String> skyMap = parsingFcst(fcstData);
+
+        if(!skyMap.isEmpty()) {
+            ncstMap.put("SKY", skyMap.get("SKY"));
+        }
+
+        return ncstMap;
+    }
+
+    private Map<String, String> parsingNcst(String ncstData) {
+
+        JsonArray items = convertItemArray(ncstData);
+
+        Map<String, String> map = new HashMap<>();
+        for(int i=0; i<items.size(); i++) {
+            JsonElement jsonElement = items.get(i);
+
+            Gson gson = new Gson();
+            NcstVO ncstVO = gson.fromJson(jsonElement, NcstVO.class);
+
+            ConvertController(ncstVO);
+            ncstVO.setObsrValue(ncstVO.getObsrValue() +
+                    UltraSrt.valueOf(ncstVO.getCategory()).getUnit());
+            // ncstVO.setCategory(UltraSrt.valueOf(ncstVO.getCategory()).getName());
+
+            map.put(ncstVO.getCategory(), ncstVO.getObsrValue());
+        }
+
+        return map;
+    }
+
+    private Map<String, String> parsingFcst(String fcstData) {
+
+        JsonArray items = convertItemArray(fcstData);
+
+        Map<String, String> map = new HashMap<>();
+        for(int i=0; i<items.size(); i++) {
+            JsonElement jsonElement = items.get(i);
+
+            Gson gson = new Gson();
+            FcstVO fcstVO = gson.fromJson(jsonElement, FcstVO.class);
+
+            String skyValue = null;
+            if(fcstVO.getCategory().equals("SKY")) {
+                SKYConverter(fcstVO);
+                map.put(fcstVO.getCategory(), fcstVO.getFcstValue());
+                break;
+            }
+        }
+
+        return map;
+    }
+
+    private JsonArray convertItemArray(String data) {
+
+        JsonObject jsonObject = (JsonObject) JsonParser.parseString(data);
+        JsonObject parse_response = (JsonObject) jsonObject.get("response");
+        JsonObject parse_body = (JsonObject) parse_response.get("body");
+        JsonObject parse_items = (JsonObject) parse_body.get("items");
+
+        return (JsonArray) parse_items.get("item");
+    }
+
+    private String connect(String fcstType) throws IOException {
+        URL url = buildURL(fcstType);
 
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("GET");
         conn.setRequestProperty("Content-type", "application/json");
 
-        int responseCode = conn.getResponseCode();
-
-        log.info("Response code: {}", responseCode);
+        log.info("Response code: {}", conn.getResponseCode());
 
         BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
         StringBuilder sb = new StringBuilder();
@@ -48,37 +118,15 @@ public class APIController {
             sb.append(temp);
         }
 
-        JsonObject jsonObject = (JsonObject) JsonParser.parseString(sb.toString());
-        JsonObject parse_response = (JsonObject) jsonObject.get("response");
-        // JsonElement parse_header = (JsonObject) jsonObject.get("header");
-
-        JsonObject parse_body = (JsonObject) parse_response.get("body");
-        JsonObject parse_items = (JsonObject) parse_body.get("items");
-        JsonArray array = (JsonArray) parse_items.get("item");
-
-        List<NcstVO> weathers = new ArrayList<>();
-        for(int i=0; i<array.size(); i++) {
-            JsonElement jsonElement = array.get(i);
-
-            Gson gson = new Gson();
-            NcstVO ncstVO = gson.fromJson(jsonElement, NcstVO.class);
-
-            ConvertController(ncstVO);
-            ncstVO.setObsrValue(ncstVO.getObsrValue() +
-                    UltraSrt.valueOf(ncstVO.getCategory()).getUnit());
-            ncstVO.setCategory(UltraSrt.valueOf(ncstVO.getCategory()).getName());
-
-            weathers.add(ncstVO);
-        }
-
         br.close();
         conn.disconnect();
 
-        return weathers;
+        return sb.toString();
     }
 
-    private URL buildURL() throws MalformedURLException {
-        String endPointURI = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst";
+
+    private URL buildURL(String fcstType) throws MalformedURLException {
+        String endPointURI = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/" + fcstType;
 
         String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String hour = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH"));
@@ -95,7 +143,7 @@ public class APIController {
                 .queryParam("numOfRows", "60")
                 .queryParam("dataType", "JSON")
                 .queryParam("base_date", date)
-                .queryParam("base_time", hour + "00") // 30분 발표
+                .queryParam("base_time", hour + "00") // Ncst : 30분 발표
                 .queryParam("nx", "57")
                 .queryParam("ny", "128");
 
@@ -105,12 +153,10 @@ public class APIController {
     }
 
     private void ConvertController(NcstVO ncstVO) {
+
         switch(ncstVO.getCategory()) {
             case "VEC":
                 VECConverter(ncstVO);
-                break;
-            case "SKY":
-                SKYConverter(ncstVO);
                 break;
             case "PTY":
                 PTYConverter(ncstVO);
@@ -158,24 +204,6 @@ public class APIController {
         return ncstVO.getObsrValue();
     }
 
-    private String SKYConverter(NcstVO ncstVO) {
-        int value = Integer.parseInt(ncstVO.getObsrValue());
-
-        if(value >= 0 && value <= 5) {
-
-            ncstVO.setObsrValue("맑음");
-
-        } else if(value >= 6 && value <= 8) {
-
-            ncstVO.setObsrValue("구름많음");
-
-        } else if(value >= 9 && value <= 10) {
-
-            ncstVO.setObsrValue("흐림");
-        }
-
-        return ncstVO.getObsrValue();
-    }
 
     private String PTYConverter(NcstVO ncstVO) {
         int value = Integer.parseInt(ncstVO.getObsrValue());
@@ -211,6 +239,23 @@ public class APIController {
     }
 
 
+    private String SKYConverter(FcstVO fcstVO) {
+        int value = Integer.parseInt(fcstVO.getFcstValue());
 
+        if(value >= 0 && value <= 5) {
+
+            fcstVO.setFcstValue("맑음");
+
+        } else if(value >= 6 && value <= 8) {
+
+            fcstVO.setFcstValue("구름많음");
+
+        } else if(value >= 9 && value <= 10) {
+
+            fcstVO.setFcstValue("흐림");
+        }
+
+        return fcstVO.getFcstValue();
+    }
 
 }

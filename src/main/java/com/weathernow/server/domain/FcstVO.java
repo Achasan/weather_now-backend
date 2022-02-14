@@ -7,12 +7,8 @@ import lombok.ToString;
 @Getter
 @Setter
 @ToString
-public class FcstVO {
-    private String baseTime;
-    private String category;
+public class FcstVO extends ForecastDTO {
     private String fcstDate;
     private String fcstTime;
-    private String FcstValue;
-    private int nx;
-    private int ny;
+    private String fcstValue;
 }
