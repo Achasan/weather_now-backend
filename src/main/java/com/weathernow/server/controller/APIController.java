@@ -47,6 +47,7 @@ public class APIController {
         return ncstMap;
     }
 
+
     private Map<String, String> parsingNcst(String ncstData) {
 
         JsonArray items = convertItemArray(ncstData);
@@ -68,6 +69,7 @@ public class APIController {
 
         return map;
     }
+
 
     private Map<String, String> parsingFcst(String fcstData) {
 
@@ -101,7 +103,8 @@ public class APIController {
         return (JsonArray) parse_items.get("item");
     }
 
-    private String connect(String fcstType) throws IOException {
+
+    public String connect(String fcstType) throws IOException {
         URL url = buildURL(fcstType);
 
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -143,7 +146,7 @@ public class APIController {
                 .queryParam("numOfRows", "60")
                 .queryParam("dataType", "JSON")
                 .queryParam("base_date", date)
-                .queryParam("base_time", hour + "00") // Ncst : 30분 발표
+                .queryParam("base_time", hour + min) // Ncst : 30분 발표
                 .queryParam("nx", "57")
                 .queryParam("ny", "128");
 
@@ -155,6 +158,9 @@ public class APIController {
     private void ConvertController(NcstVO ncstVO) {
 
         switch(ncstVO.getCategory()) {
+            case "T1H":
+                ncstVO.setObsrValue(Long.toString(T1HConverter(ncstVO)));
+                break;
             case "VEC":
                 VECConverter(ncstVO);
                 break;
@@ -164,40 +170,28 @@ public class APIController {
         }
     }
 
+    private long T1HConverter(NcstVO ncstVO) {
+        return Math.round(Double.parseDouble(ncstVO.getObsrValue()));
+    }
+
     private String VECConverter(NcstVO ncstVO) {
         int value = Integer.parseInt(ncstVO.getObsrValue());
 
-        if(value >= 0 && value <= 45) {
+        if(value >= 0 && value <= 90) {
 
-            ncstVO.setObsrValue("북-북동풍");
+            ncstVO.setObsrValue("북동풍");
 
-        } else if(value >= 45 && value <= 90) {
+        } else if(value >= 90 && value <= 180) {
 
-            ncstVO.setObsrValue("북동-동풍");
+            ncstVO.setObsrValue("남동풍");
 
-        } else if(value >= 90 && value <= 135) {
+        } else if(value >= 180 && value <= 270) {
 
-            ncstVO.setObsrValue("동-남동풍");
+            ncstVO.setObsrValue("남서풍");
 
-        } else if(value >= 135 && value <= 180) {
+        } else if(value >= 270 && value <= 360) {
 
-            ncstVO.setObsrValue("남동-남풍");
-
-        } else if(value >= 180 && value <= 225) {
-
-            ncstVO.setObsrValue("남-남서풍");
-
-        } else if(value >= 225 && value <= 270) {
-
-            ncstVO.setObsrValue("남서-서풍");
-
-        } else if(value >= 270 && value <= 315) {
-
-            ncstVO.setObsrValue("서-북서풍");
-
-        } else if(value >= 315 && value <= 360) {
-
-            ncstVO.setObsrValue("북서-북풍");
+            ncstVO.setObsrValue("북서풍");
 
         }
 
@@ -210,7 +204,7 @@ public class APIController {
 
         switch(value) {
             case 0:
-                ncstVO.setObsrValue("없음");
+                ncstVO.setObsrValue("맑음");
                 break;
             case 1:
                 ncstVO.setObsrValue("비");
