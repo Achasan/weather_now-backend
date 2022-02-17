@@ -3,14 +3,13 @@ package com.weathernow.server.mapper;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import com.weathernow.server.domain.NcstVO;
+import com.weathernow.server.model.NcstVO;
 import com.weathernow.server.enumeration.UltraSrt;
 import com.weathernow.server.enumeration.VilageFcst;
-import com.weathernow.server.domain.FcstVO;
+import com.weathernow.server.model.FcstVO;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -37,29 +36,6 @@ public class APIControllerTest {
 
         //then
         Assertions.assertThat(hour + min).isEqualTo("0902");
-    }
-
-    @Test
-    public Map<String, String> parsingNcst(String ncstData) {
-
-        JsonArray items = convertItemArray(ncstData);
-
-        Map<String, String> map = new HashMap<>();
-        for(int i=0; i<items.size(); i++) {
-            JsonElement jsonElement = items.get(i);
-
-            Gson gson = new Gson();
-            NcstVO ncstVO = gson.fromJson(jsonElement, NcstVO.class);
-
-            ConvertController(ncstVO);
-            ncstVO.setObsrValue(ncstVO.getObsrValue() +
-                    UltraSrt.valueOf(ncstVO.getCategory()).getUnit());
-            // ncstVO.setCategory(UltraSrt.valueOf(ncstVO.getCategory()).getName());
-
-            map.put(ncstVO.getCategory(), ncstVO.getObsrValue());
-        }
-
-        return map;
     }
 
     @Test

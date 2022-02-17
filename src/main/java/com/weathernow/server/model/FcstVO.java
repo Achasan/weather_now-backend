@@ -1,4 +1,4 @@
-package com.weathernow.server.domain;
+package com.weathernow.server.model;
 
 import lombok.Getter;
 import lombok.Setter;

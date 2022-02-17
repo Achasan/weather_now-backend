@@ -1,5 +1,8 @@
 package com.weathernow.server.enumeration;
 
+/**
+ * 단기예보
+ */
 public enum VilageFcst {
 
     POP("강수확률"),

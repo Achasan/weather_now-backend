@@ -1,9 +1,10 @@
 package com.weathernow.server.controller;
 
 import com.google.gson.*;
-import com.weathernow.server.domain.FcstVO;
-import com.weathernow.server.domain.NcstVO;
+import com.weathernow.server.model.FcstVO;
+import com.weathernow.server.model.NcstVO;
 import com.weathernow.server.enumeration.UltraSrt;
+import com.weathernow.server.model.VersionDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,12 +16,14 @@ import java.io.InputStreamReader;
 import java.net.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * UltraSrtNcst : 초단기 실황
  * UltraSrtFcst : 초단기 예보
+ * getVilageFcst : 단기예보조회
  */
 
 @Slf4j
@@ -30,21 +33,43 @@ public class APIController {
 
     private final String ncst = "getUltraSrtNcst";
     private final String fcst = "getUltraSrtFcst";
+    private final String vilage = "getVilageFcst";
+    private final String version = "getFcstVersion";
 
-    @GetMapping("UltraSrtNcst")
-    public Map<String, String> forecast() throws IOException {
+    @GetMapping("weather")
+    public Map<String, Map> forecast() throws IOException {
+
+        Map<String, Map> finalMap = new HashMap<>();
 
         String ncstData = connect(ncst);
         String fcstData = connect(fcst);
+        String vilageData = connect(vilage);
+        String versionData = connect(version);
 
         Map<String, String> ncstMap = parsingNcst(ncstData);
-        Map<String, String> skyMap = parsingFcst(fcstData);
+        Map<String, Map> vilageMap = parsingVilage(vilageData);
+        String skyValue = parsingFcst(fcstData);
+        String version = parsingVersion(versionData);
 
-        if(!skyMap.isEmpty()) {
-            ncstMap.put("SKY", skyMap.get("SKY"));
+        if(skyValue != null) {
+            ncstMap.put("SKY", skyValue);
         }
 
-        return ncstMap;
+        if(version != null) {
+            ncstMap.put("ODAM", version);
+        }
+
+        if(!vilageMap.get("sky").isEmpty()) {
+            finalMap.put("vilageSky", vilageMap.get("sky"));
+        }
+
+        if(!vilageMap.get("tmp").isEmpty()) {
+            finalMap.put("vilageTmp", vilageMap.get("tmp"));
+        }
+
+        finalMap.put("ncst", ncstMap);
+
+        return finalMap;
     }
 
 
@@ -71,26 +96,64 @@ public class APIController {
     }
 
 
-    private Map<String, String> parsingFcst(String fcstData) {
+    private String parsingFcst(String fcstData) {
 
         JsonArray items = convertItemArray(fcstData);
 
-        Map<String, String> map = new HashMap<>();
+        String skyValue = null;
         for(int i=0; i<items.size(); i++) {
             JsonElement jsonElement = items.get(i);
 
             Gson gson = new Gson();
             FcstVO fcstVO = gson.fromJson(jsonElement, FcstVO.class);
 
-            String skyValue = null;
             if(fcstVO.getCategory().equals("SKY")) {
                 SKYConverter(fcstVO);
-                map.put(fcstVO.getCategory(), fcstVO.getFcstValue());
+                skyValue = fcstVO.getFcstValue();
                 break;
             }
         }
 
-        return map;
+        return skyValue;
+    }
+
+    private Map<String, Map> parsingVilage(String fcstData) {
+
+        JsonArray items = convertItemArray(fcstData);
+
+        Map<String, Map> packageMap = new HashMap<>();
+        Map<String, String> skyMap = new HashMap<>();
+        Map<String, String> tmpMap = new HashMap<>();
+
+        for(int i=0; i<items.size(); i++) {
+            JsonElement jsonElement = items.get(i);
+
+            Gson gson = new Gson();
+            FcstVO fcstVO = gson.fromJson(jsonElement, FcstVO.class);
+
+            String dateTime = fcstVO.getFcstDate() + fcstVO.getFcstTime();
+            if(fcstVO.getCategory().equals("SKY")) {
+                skyMap.put(dateTime.substring(4), fcstVO.getFcstValue());
+            } else if (fcstVO.getCategory().equals("TMP")) {
+                tmpMap.put(dateTime.substring(4), fcstVO.getFcstValue() + "°");
+            }
+        }
+
+        packageMap.put("sky", skyMap);
+        packageMap.put("tmp", tmpMap);
+
+        return packageMap;
+    }
+
+    private String parsingVersion(String versionData) {
+        JsonArray item = convertItemArray(versionData);
+
+        JsonElement jsonElement = item.get(0);
+
+        Gson gson = new Gson();
+        VersionDTO versionDTO = gson.fromJson(jsonElement, VersionDTO.class);
+
+        return versionDTO.getVersion();
     }
 
     private JsonArray convertItemArray(String data) {
@@ -135,7 +198,7 @@ public class APIController {
         String hour = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH"));
         String min = LocalDateTime.now().format(DateTimeFormatter.ofPattern("mm"));
 
-        if(Integer.parseInt(min) < 30) {
+        if (Integer.parseInt(min) < 30) {
             int modifiedHour = Integer.parseInt(hour) - 1;
             hour = String.format("%02d", modifiedHour);
         }
@@ -143,12 +206,31 @@ public class APIController {
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(endPointURI)
                 .queryParam("serviceKey", "WIhsB06waJJMJZMm/M4SkVOW7q/e0dtIWgG/jNK9eovNSpJl2jaCpkaUOpX6SSgDd4CbGTXZNEeYzl0RZ9e2Sg==")
                 .queryParam("pageNo", "1")
-                .queryParam("numOfRows", "60")
-                .queryParam("dataType", "JSON")
-                .queryParam("base_date", date)
-                .queryParam("base_time", hour + min) // Ncst : 30분 발표
-                .queryParam("nx", "57")
-                .queryParam("ny", "128");
+                .queryParam("dataType", "JSON");
+
+        if (fcstType.equals(ncst) || fcstType.equals(fcst)) {
+
+            builder.queryParam("base_date", date)
+                    .queryParam("base_time", hour + min) // Ncst : 30분 발표
+                    .queryParam("numOfRows", "60")
+                    .queryParam("nx", "57")
+                    .queryParam("ny", "128");
+
+        } else if (fcstType.equals(vilage)) {
+
+            builder.queryParam("base_date", date)
+                    .queryParam("base_time", "1100") // Ncst : 30분 발표
+                    .queryParam("numOfRows", "1000")
+                    .queryParam("nx", "57")
+                    .queryParam("ny", "128");
+
+        } else {
+
+            builder.queryParam("ftype", "ODAM")
+                    .queryParam("numOfRows", "60")
+                    .queryParam("basedatetime", date + hour + min);
+
+        }
 
         log.info("Forcast Request URL = {}", builder.build().encode().toUri().toURL());
 
