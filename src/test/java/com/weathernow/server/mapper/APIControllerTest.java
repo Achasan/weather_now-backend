@@ -1,18 +1,10 @@
 package com.weathernow.server.mapper;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.weathernow.server.model.NcstVO;
-import com.weathernow.server.enumeration.UltraSrt;
 import com.weathernow.server.enumeration.VilageFcst;
 import com.weathernow.server.model.FcstVO;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @Slf4j
 public class APIControllerTest {
@@ -58,8 +50,6 @@ public class APIControllerTest {
         fcstVO.setBaseTime("0830");
         fcstVO.setFcstTime("1100");
         fcstVO.setFcstValue("227");
-        fcstVO.setNx(36);
-        fcstVO.setNy(127);
 
         //when
         int value = Integer.parseInt(fcstVO.getFcstValue());
