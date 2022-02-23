@@ -102,16 +102,16 @@ public class ForecastApiServiceImpl implements ForecastApiService {
             builder.queryParam("base_date", date)
                     .queryParam("base_time", hour + min) // Ncst : 30분 발표
                     .queryParam("numOfRows", "60")
-                    .queryParam("nx", "21")
-                    .queryParam("ny", "135");
+                    .queryParam("nx", "57")
+                    .queryParam("ny", "128");
 
         } else if (fcstType.equals(vilage)) {
 
             builder.queryParam("base_date", date)
                     .queryParam("base_time", "0800") // Ncst : 30분 발표
                     .queryParam("numOfRows", "1000")
-                    .queryParam("nx", "21")
-                    .queryParam("ny", "135");
+                    .queryParam("nx", "57")
+                    .queryParam("ny", "128");
 
         } else {
 
@@ -185,6 +185,8 @@ public class ForecastApiServiceImpl implements ForecastApiService {
         Map<String, Map> packageMap = new HashMap<>();
         Map<String, String> skyMap = new HashMap<>();
         Map<String, String> tmpMap = new HashMap<>();
+        Map<String, String> ptyMap = new HashMap<>();
+        Map<String, String> popMap = new HashMap<>();
 
         for(int i=0; i<items.size(); i++) {
             JsonElement jsonElement = items.get(i);
@@ -193,15 +195,29 @@ public class ForecastApiServiceImpl implements ForecastApiService {
             FcstVO fcstVO = gson.fromJson(jsonElement, FcstVO.class);
 
             String dateTime = fcstVO.getFcstDate() + fcstVO.getFcstTime();
+
             if(fcstVO.getCategory().equals("SKY")) {
+
                 skyMap.put(dateTime.substring(4), fcstVO.getFcstValue());
+
             } else if (fcstVO.getCategory().equals("TMP")) {
+
                 tmpMap.put(dateTime.substring(4), fcstVO.getFcstValue() + "°");
+
+            } else if (fcstVO.getCategory().equals("PTY")) {
+
+                ptyMap.put(dateTime.substring(4), fcstVO.getFcstValue());
+
+            } else if (fcstVO.getCategory().equals("POP")) {
+
+                popMap.put(dateTime.substring(4), fcstVO.getFcstValue());
             }
         }
 
         packageMap.put("sky", skyMap);
         packageMap.put("tmp", tmpMap);
+        packageMap.put("pty", ptyMap);
+        packageMap.put("pop", popMap);
 
         return packageMap;
     }
