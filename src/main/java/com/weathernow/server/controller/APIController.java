@@ -27,7 +27,7 @@ public class APIController {
     private final ForecastApiService apiService;
 
     @GetMapping("weather")
-    public Map<String, Map> forecast() throws IOException {
+    public Map<String, Object> forecast() throws IOException {
         return apiService.weatherCall();
     }
 }

@@ -6,5 +6,5 @@ import java.util.Map;
 
 public interface ForecastApiService {
 
-    Map<String, Map> weatherCall() throws IOException;
+    Map<String, Object> weatherCall() throws IOException;
 }

@@ -1,10 +1,10 @@
 package com.weathernow.server.service;
 
 import com.google.gson.*;
-import com.weathernow.server.enumeration.UltraSrt;
 import com.weathernow.server.model.FcstVO;
 import com.weathernow.server.model.NcstVO;
-import com.weathernow.server.model.VersionDTO;
+import com.weathernow.server.model.VersionVO;
+import com.weathernow.server.model.VilageDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -17,8 +17,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -30,7 +29,7 @@ public class ForecastApiServiceImpl implements ForecastApiService {
     public static final String version = "getFcstVersion";
 
     @Override
-    public Map<String, Map> weatherCall() throws IOException {
+    public Map<String, Object> weatherCall() throws IOException {
 
         String jsonData = connect(ncst);
         Map<String, String> ncstMap = parsingNcst(jsonData);
@@ -39,7 +38,7 @@ public class ForecastApiServiceImpl implements ForecastApiService {
         String skyValue = parsingFcst(jsonData);
 
         jsonData = connect(vilage);
-        Map<String, Map> vilageMap = parsingVilage(jsonData);
+        List<VilageDTO> vilageList = parsingVilage(jsonData);
 
         jsonData = connect(version);
         String versionValue = parsingVersion(jsonData);
@@ -47,10 +46,11 @@ public class ForecastApiServiceImpl implements ForecastApiService {
         ncstMap.put("SKY", skyValue);
         ncstMap.put("ODAM", versionValue);
 
-        Map<String, Map> weatherData = new HashMap<>();
+        Map<String, Object> weatherData = new HashMap<>();
 
         weatherData.put("ncst", ncstMap);
-        weatherData.put("vilage", vilageMap);
+        weatherData.put("vilage", vilageList);
+
         return weatherData;
     }
 
@@ -102,16 +102,16 @@ public class ForecastApiServiceImpl implements ForecastApiService {
             builder.queryParam("base_date", date)
                     .queryParam("base_time", hour + min) // Ncst : 30분 발표
                     .queryParam("numOfRows", "60")
-                    .queryParam("nx", "57")
-                    .queryParam("ny", "128");
+                    .queryParam("nx", "48")
+                    .queryParam("ny", "36");
 
         } else if (fcstType.equals(vilage)) {
 
             builder.queryParam("base_date", date)
                     .queryParam("base_time", "0800") // Ncst : 30분 발표
                     .queryParam("numOfRows", "1000")
-                    .queryParam("nx", "57")
-                    .queryParam("ny", "128");
+                    .queryParam("nx", "48")
+                    .queryParam("ny", "36");
 
         } else {
 
@@ -178,11 +178,10 @@ public class ForecastApiServiceImpl implements ForecastApiService {
     }
 
 
-    private Map<String, Map> parsingVilage(String fcstData) {
+    private List<VilageDTO> parsingVilage(String fcstData) {
 
         JsonArray items = convertItemArray(fcstData);
 
-        Map<String, Map> packageMap = new HashMap<>();
         Map<String, String> skyMap = new HashMap<>();
         Map<String, String> tmpMap = new HashMap<>();
         Map<String, String> ptyMap = new HashMap<>();
@@ -214,12 +213,20 @@ public class ForecastApiServiceImpl implements ForecastApiService {
             }
         }
 
-        packageMap.put("sky", skyMap);
-        packageMap.put("tmp", tmpMap);
-        packageMap.put("pty", ptyMap);
-        packageMap.put("pop", popMap);
+        List<VilageDTO> voList = new ArrayList<VilageDTO>();
 
-        return packageMap;
+        for(String s : skyMap.keySet()) {
+            VilageDTO dto = new VilageDTO();
+            dto.setFcstTime(s);
+            dto.setPop(popMap.get(s));
+            dto.setPty(ptyMap.get(s));
+            dto.setSky(skyMap.get(s));
+            dto.setTmp(tmpMap.get(s));
+
+            voList.add(dto);
+        }
+
+        return voList;
     }
 
 
@@ -229,7 +236,7 @@ public class ForecastApiServiceImpl implements ForecastApiService {
         JsonElement jsonElement = item.get(0);
 
         Gson gson = new Gson();
-        VersionDTO versionDTO = gson.fromJson(jsonElement, VersionDTO.class);
+        VersionVO versionDTO = gson.fromJson(jsonElement, VersionVO.class);
 
         return versionDTO.getVersion();
     }

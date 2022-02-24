@@ -7,7 +7,7 @@ import lombok.ToString;
 @Getter
 @Setter
 @ToString
-public class VersionDTO {
-    String filetype;
-    String version;
+public class ForecastVO {
+    private String baseTime;
+    private String category;
 }

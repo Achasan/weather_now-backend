@@ -8,7 +8,7 @@ import lombok.ToString;
 @Getter
 @Setter
 @ToString
-public class NcstVO extends ForecastDTO {
+public class NcstVO extends ForecastVO {
     private String obsrValue;
 
     public String getObsrValue() {
