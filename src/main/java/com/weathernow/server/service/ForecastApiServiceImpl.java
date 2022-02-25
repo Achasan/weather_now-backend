@@ -87,8 +87,14 @@ public class ForecastApiServiceImpl implements ForecastApiService {
         String hour = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH"));
         String min = LocalDateTime.now().format(DateTimeFormatter.ofPattern("mm"));
 
-        if (Integer.parseInt(min) < 30) {
+        if(!fcstType.equals(vilage) && Integer.parseInt(min) < 30) {
             int modifiedHour = Integer.parseInt(hour) - 1;
+            hour = String.format("%02d", modifiedHour);
+        }
+
+        if(fcstType.equals(vilage)) {
+            int modifiedHour = Integer.parseInt(hour);
+            modifiedHour = ((modifiedHour - 2) / 3 * 3) + 2;
             hour = String.format("%02d", modifiedHour);
         }
 
@@ -102,16 +108,16 @@ public class ForecastApiServiceImpl implements ForecastApiService {
             builder.queryParam("base_date", date)
                     .queryParam("base_time", hour + min) // Ncst : 30분 발표
                     .queryParam("numOfRows", "60")
-                    .queryParam("nx", "48")
-                    .queryParam("ny", "36");
+                    .queryParam("nx", "57")
+                    .queryParam("ny", "128");
 
         } else if (fcstType.equals(vilage)) {
 
             builder.queryParam("base_date", date)
-                    .queryParam("base_time", "0800") // Ncst : 30분 발표
+                    .queryParam("base_time", hour + min) // Ncst : 30분 발표
                     .queryParam("numOfRows", "1000")
-                    .queryParam("nx", "48")
-                    .queryParam("ny", "36");
+                    .queryParam("nx", "57")
+                    .queryParam("ny", "128");
 
         } else {
 
@@ -182,48 +188,67 @@ public class ForecastApiServiceImpl implements ForecastApiService {
 
         JsonArray items = convertItemArray(fcstData);
 
-        Map<String, String> skyMap = new HashMap<>();
-        Map<String, String> tmpMap = new HashMap<>();
-        Map<String, String> ptyMap = new HashMap<>();
-        Map<String, String> popMap = new HashMap<>();
+        List<VilageDTO> voList = new ArrayList<>();
+
+        String fcstTime = null;
+
+        VilageDTO testDTO = null;
 
         for(int i=0; i<items.size(); i++) {
-            JsonElement jsonElement = items.get(i);
+            JsonObject jsonObject = (JsonObject) items.get(i);
 
-            Gson gson = new Gson();
-            FcstVO fcstVO = gson.fromJson(jsonElement, FcstVO.class);
+            String fcstDate = jsonObject.get("fcstDate").getAsString().substring(4);
+            String fcstTimeElement = jsonObject.get("fcstTime").getAsString();
+            String category = jsonObject.get("category").getAsString();
+            String fcstValue = jsonObject.get("fcstValue").getAsString();
 
-            String dateTime = fcstVO.getFcstDate() + fcstVO.getFcstTime();
-
-            if(fcstVO.getCategory().equals("SKY")) {
-
-                skyMap.put(dateTime.substring(4), fcstVO.getFcstValue());
-
-            } else if (fcstVO.getCategory().equals("TMP")) {
-
-                tmpMap.put(dateTime.substring(4), fcstVO.getFcstValue() + "°");
-
-            } else if (fcstVO.getCategory().equals("PTY")) {
-
-                ptyMap.put(dateTime.substring(4), fcstVO.getFcstValue());
-
-            } else if (fcstVO.getCategory().equals("POP")) {
-
-                popMap.put(dateTime.substring(4), fcstVO.getFcstValue());
+            if(fcstTime == null) {
+                fcstTime = fcstDate + fcstTimeElement;
+                testDTO = new VilageDTO();
             }
-        }
 
-        List<VilageDTO> voList = new ArrayList<VilageDTO>();
+            if((fcstDate + fcstTimeElement).equals(fcstTime)) {
 
-        for(String s : skyMap.keySet()) {
-            VilageDTO dto = new VilageDTO();
-            dto.setFcstTime(s);
-            dto.setPop(popMap.get(s));
-            dto.setPty(ptyMap.get(s));
-            dto.setSky(skyMap.get(s));
-            dto.setTmp(tmpMap.get(s));
+                if(category.equals("SKY")) {
 
-            voList.add(dto);
+                    testDTO.setSky(fcstValue);
+
+                } else if (category.equals("TMP")) {
+
+                    testDTO.setTmp(fcstValue);
+
+                } else if (category.equals("PTY")) {
+
+                    testDTO.setPty(fcstValue);
+
+                } else if (category.equals("POP")) {
+
+                    testDTO.setPop(fcstValue);
+
+                }
+            }
+
+            if(i != items.size() - 1) {
+
+                JsonObject nextElement = (JsonObject) items.get(i + 1);
+                String nextFcstDate = nextElement.get("fcstDate").getAsString().substring(4);
+                String nextFcstTime = nextElement.get("fcstTime").getAsString();
+
+                if(!(nextFcstDate + nextFcstTime).equals(fcstTime)) {
+
+                    testDTO.setFcstTime(fcstTime);
+                    fcstTime = nextFcstDate + nextFcstTime;
+                    voList.add(testDTO);
+                    testDTO = new VilageDTO();
+                }
+
+            } else {
+
+                testDTO.setFcstTime(fcstTime);
+                voList.add(testDTO);
+
+            }
+
         }
 
         return voList;

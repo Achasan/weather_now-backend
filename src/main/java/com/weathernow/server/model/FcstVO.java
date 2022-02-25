@@ -1,5 +1,6 @@
 package com.weathernow.server.model;
 
+import com.weathernow.server.util.FcstValueConverter;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -15,29 +16,9 @@ public class FcstVO extends ForecastVO {
     public String getFcstValue() {
 
         if(this.getCategory().equals("SKY")) {
-            return SKYConverter();
+            return FcstValueConverter.SKYConverter(this.fcstValue);
         }
 
         return this.fcstValue;
-    }
-
-    private String SKYConverter() {
-
-        int value = Integer.parseInt(this.fcstValue);
-        String convertValue = null;
-
-        switch(value) {
-            case 1:
-                convertValue = "맑음";
-                break;
-            case 3:
-                convertValue = "구름많음";
-                break;
-            case 4:
-                convertValue = "흐림";
-                break;
-        }
-
-        return convertValue;
     }
 }

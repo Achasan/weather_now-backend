@@ -7,6 +7,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.List;
+import com.weathernow.server.model.VilageDTO;
 
 @SpringBootTest
 public class ForecastApiServiceTest {
@@ -20,17 +22,11 @@ public class ForecastApiServiceTest {
         //given
 
         //when
-        Map<String, Map> map = apiService.weatherCall();
+        Map<String, Object> map = apiService.weatherCall();
 
         //then
-        Assertions.assertThat(map.get("ncst"))
+        Assertions.assertThat((Map<String, String>) map.get("ncst"))
                 .containsKey("ODAM")
                 .containsKey("SKY");
-
-        Assertions.assertThat(map.get("vilage"))
-                .containsKey("pop")
-                .containsKey("pty")
-                .containsKey("sky")
-                .containsKey("tmp");
     }
 }

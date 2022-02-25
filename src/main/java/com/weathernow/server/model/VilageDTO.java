@@ -1,6 +1,7 @@
 package com.weathernow.server.model;
 
 import com.weathernow.server.enumeration.VilageFcst;
+import com.weathernow.server.util.FcstValueConverter;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -18,13 +19,14 @@ public class VilageDTO {
     }
 
     public void setPty(String pty) {
-        this.pty = pty + VilageFcst.valueOf("PTY").getUnit();
+        this.pty = FcstValueConverter.PTYConverter(pty) + VilageFcst.valueOf("PTY").getUnit();
     }
 
     public void setSky(String sky) {
-        this.sky = sky + VilageFcst.valueOf("SKY").getUnit();
+        this.sky = FcstValueConverter.SKYConverter(sky) + VilageFcst.valueOf("SKY").getUnit();
     }
-    public void getTmp(String tmp) {
+
+    public void setTmp(String tmp) {
         this.tmp = tmp + VilageFcst.valueOf("TMP").getUnit();
     }
 
