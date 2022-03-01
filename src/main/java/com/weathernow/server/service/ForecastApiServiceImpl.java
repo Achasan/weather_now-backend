@@ -1,156 +1,62 @@
 package com.weathernow.server.service;
 
 import com.google.gson.*;
-import com.weathernow.server.model.FcstVO;
-import com.weathernow.server.model.NcstVO;
-import com.weathernow.server.model.VersionVO;
-import com.weathernow.server.model.VilageDTO;
+import com.weathernow.server.api.WeatherAPI;
+import com.weathernow.server.model.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.UriComponentsBuilder;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+
 import java.util.*;
 
 @Slf4j
 @Service
 public class ForecastApiServiceImpl implements ForecastApiService {
 
-    public static final String ncst = "getUltraSrtNcst";
-    public static final String fcst = "getUltraSrtFcst";
-    public static final String vilage = "getVilageFcst";
-    public static final String version = "getFcstVersion";
-
     @Override
     public Map<String, Object> weatherCall() throws IOException {
 
-        String jsonData = connect(ncst);
-        Map<String, String> ncstMap = parsingNcst(jsonData);
+        WeatherAPI api = new WeatherAPI();
+        Map<String, JsonArray> liveMap = api.getLiveData();
 
-        jsonData = connect(fcst);
-        String skyValue = parsingFcst(jsonData);
-
-        jsonData = connect(vilage);
-        List<VilageDTO> vilageList = parsingVilage(jsonData);
-
-        jsonData = connect(version);
-        String versionValue = parsingVersion(jsonData);
-
-        ncstMap.put("SKY", skyValue);
-        ncstMap.put("ODAM", versionValue);
+        LiveDTO liveDto = parsingLive(liveMap);
+        List<VilageDTO> vilageList = parsingVilage(api.getVilageData());
 
         Map<String, Object> weatherData = new HashMap<>();
 
-        weatherData.put("ncst", ncstMap);
+        weatherData.put("live", liveDto);
         weatherData.put("vilage", vilageList);
 
         return weatherData;
     }
 
+    private LiveDTO parsingLive(Map<String, JsonArray> liveMap) {
 
-    private String connect(String fcstType) throws IOException {
+        LiveDTO dto = new LiveDTO();
 
-        URL url = buildURL(fcstType);
+        Map<String, String> ncstMap = parsingNcst(liveMap.get("ncst"));
 
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("GET");
-        conn.setRequestProperty("Content-type", "application/json");
+        dto.setPTY(ncstMap.get("PTY"));
+        dto.setREH(ncstMap.get("REH"));
+        dto.setRN1(ncstMap.get("RN1"));
+        dto.setT1H(ncstMap.get("T1H"));
+        dto.setUUU(ncstMap.get("UUU"));
+        dto.setVEC(ncstMap.get("VEC"));
+        dto.setVVV(ncstMap.get("VVV"));
+        dto.setWSD(ncstMap.get("WSD"));
+        dto.setSKY(parsingFcst(liveMap.get("fcst")));
+        dto.setODAM(parsingVersion(liveMap.get("version")));
 
-        log.info("Response code: {}", conn.getResponseCode());
-
-        BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-        StringBuilder sb = new StringBuilder();
-
-        String temp = "";
-        while((temp = br.readLine()) != null) {
-            sb.append(temp);
-        }
-
-        br.close();
-        conn.disconnect();
-
-        return sb.toString();
+        return dto;
     }
 
-
-    private URL buildURL(String fcstType) throws MalformedURLException {
-        String endPointURI = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/" + fcstType;
-
-        String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String hour = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH"));
-        String min = LocalDateTime.now().format(DateTimeFormatter.ofPattern("mm"));
-
-        if(!fcstType.equals(vilage) && Integer.parseInt(min) < 30) {
-            int modifiedHour = Integer.parseInt(hour) - 1;
-            hour = String.format("%02d", modifiedHour);
-        }
-
-        if(fcstType.equals(vilage)) {
-            int modifiedHour = Integer.parseInt(hour);
-            modifiedHour = ((modifiedHour - 2) / 3 * 3) + 2;
-            hour = String.format("%02d", modifiedHour);
-        }
-
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(endPointURI)
-                .queryParam("serviceKey", "WIhsB06waJJMJZMm/M4SkVOW7q/e0dtIWgG/jNK9eovNSpJl2jaCpkaUOpX6SSgDd4CbGTXZNEeYzl0RZ9e2Sg==")
-                .queryParam("pageNo", "1")
-                .queryParam("dataType", "JSON");
-
-        if (fcstType.equals(ncst) || fcstType.equals(fcst)) {
-
-            builder.queryParam("base_date", date)
-                    .queryParam("base_time", hour + min) // Ncst : 30분 발표
-                    .queryParam("numOfRows", "60")
-                    .queryParam("nx", "57")
-                    .queryParam("ny", "128");
-
-        } else if (fcstType.equals(vilage)) {
-
-            builder.queryParam("base_date", date)
-                    .queryParam("base_time", hour + min) // Ncst : 30분 발표
-                    .queryParam("numOfRows", "1000")
-                    .queryParam("nx", "57")
-                    .queryParam("ny", "128");
-
-        } else {
-
-            builder.queryParam("ftype", "ODAM")
-                    .queryParam("numOfRows", "60")
-                    .queryParam("basedatetime", date + hour + min);
-
-        }
-
-        log.info("Forcast Request URL = {}", builder.build().encode().toUri().toURL());
-
-        return builder.build().encode().toUri().toURL();
-    }
-
-
-    private JsonArray convertItemArray(String data) {
-
-        JsonObject jsonObject = (JsonObject) JsonParser.parseString(data);
-        JsonObject parse_response = (JsonObject) jsonObject.get("response");
-        JsonObject parse_body = (JsonObject) parse_response.get("body");
-        JsonObject parse_items = (JsonObject) parse_body.get("items");
-
-        return (JsonArray) parse_items.get("item");
-    }
-
-
-    private Map<String, String> parsingNcst(String ncstData) {
-
-        JsonArray items = convertItemArray(ncstData);
+    private Map<String, String> parsingNcst(JsonArray jsonArray) {
 
         Map<String, String> map = new HashMap<>();
-        for(int i=0; i<items.size(); i++) {
-            JsonElement jsonElement = items.get(i);
+        for(int i=0; i<jsonArray.size(); i++) {
+
+            JsonElement jsonElement = jsonArray.get(i);
 
             Gson gson = new Gson();
             NcstVO ncstVO = gson.fromJson(jsonElement, NcstVO.class);
@@ -162,14 +68,12 @@ public class ForecastApiServiceImpl implements ForecastApiService {
     }
 
 
-    private String parsingFcst(String fcstData) {
-
-        JsonArray items = convertItemArray(fcstData);
+    private String parsingFcst(JsonArray jsonArray) {
 
         String skyValue = null;
-        for(int i=0; i<items.size(); i++) {
+        for(int i=0; i<jsonArray.size(); i++) {
 
-            JsonElement jsonElement = items.get(i);
+            JsonElement jsonElement = jsonArray.get(i);
 
             Gson gson = new Gson();
             FcstVO fcstVO = gson.fromJson(jsonElement, FcstVO.class);
@@ -184,9 +88,7 @@ public class ForecastApiServiceImpl implements ForecastApiService {
     }
 
 
-    private List<VilageDTO> parsingVilage(String fcstData) {
-
-        JsonArray items = convertItemArray(fcstData);
+    private List<VilageDTO> parsingVilage(JsonArray jsonArray) {
 
         List<VilageDTO> voList = new ArrayList<>();
 
@@ -194,8 +96,8 @@ public class ForecastApiServiceImpl implements ForecastApiService {
 
         VilageDTO testDTO = null;
 
-        for(int i=0; i<items.size(); i++) {
-            JsonObject jsonObject = (JsonObject) items.get(i);
+        for(int i=0; i<jsonArray.size(); i++) {
+            JsonObject jsonObject = (JsonObject) jsonArray.get(i);
 
             String fcstDate = jsonObject.get("fcstDate").getAsString().substring(4);
             String fcstTimeElement = jsonObject.get("fcstTime").getAsString();
@@ -228,9 +130,9 @@ public class ForecastApiServiceImpl implements ForecastApiService {
                 }
             }
 
-            if(i != items.size() - 1) {
+            if(i != jsonArray.size() - 1) {
 
-                JsonObject nextElement = (JsonObject) items.get(i + 1);
+                JsonObject nextElement = (JsonObject) jsonArray.get(i + 1);
                 String nextFcstDate = nextElement.get("fcstDate").getAsString().substring(4);
                 String nextFcstTime = nextElement.get("fcstTime").getAsString();
 
@@ -255,10 +157,9 @@ public class ForecastApiServiceImpl implements ForecastApiService {
     }
 
 
-    private String parsingVersion(String versionData) {
-        JsonArray item = convertItemArray(versionData);
+    private String parsingVersion(JsonArray jsonArray) {
 
-        JsonElement jsonElement = item.get(0);
+        JsonElement jsonElement = jsonArray.get(0);
 
         Gson gson = new Gson();
         VersionVO versionDTO = gson.fromJson(jsonElement, VersionVO.class);

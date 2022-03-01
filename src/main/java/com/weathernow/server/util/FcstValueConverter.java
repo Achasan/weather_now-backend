@@ -1,6 +1,13 @@
 package com.weathernow.server.util;
 
+import com.weathernow.server.enumeration.UltraSrt;
+
 public class FcstValueConverter {
+
+    public static String T1HConverter(String t1hValue) {
+        return Long.toString(Math.round(Double.parseDouble(t1hValue)))
+                + UltraSrt.valueOf("T1H").getUnit();
+    }
 
     public static String SKYConverter(String skyValue) {
 
@@ -19,7 +26,7 @@ public class FcstValueConverter {
                 break;
         }
 
-        return convertValue;
+        return convertValue + UltraSrt.valueOf("SKY").getUnit();
     }
 
     public static String PTYConverter(String fcstValue) {
@@ -53,7 +60,7 @@ public class FcstValueConverter {
                 break;
         }
 
-        return convertValue;
+        return convertValue + UltraSrt.valueOf("PTY").getUnit();
     }
 
     public static String VECConverter(String fcstValue) {
@@ -79,6 +86,6 @@ public class FcstValueConverter {
 
         }
 
-        return convertValue;
+        return convertValue + UltraSrt.valueOf("VEC").getUnit();
     }
 }

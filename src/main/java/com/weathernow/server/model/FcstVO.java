@@ -5,6 +5,9 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
+/**
+ * Gson 매핑 객체(단기예보)
+ */
 @Getter
 @Setter
 @ToString

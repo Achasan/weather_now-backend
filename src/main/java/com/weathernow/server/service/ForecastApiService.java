@@ -7,4 +7,5 @@ import java.util.Map;
 public interface ForecastApiService {
 
     Map<String, Object> weatherCall() throws IOException;
+
 }
