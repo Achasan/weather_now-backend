@@ -14,8 +14,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Map;
 
 @Slf4j
 public class WeatherAPI {
@@ -25,22 +23,7 @@ public class WeatherAPI {
     public static final String vilage = "getVilageFcst";
     public static final String version = "getFcstVersion";
 
-    public Map<String, JsonArray> getLiveData() throws IOException {
-
-        Map<String, JsonArray> map = new HashMap<>();
-
-        map.put("ncst", connect(ncst));
-        map.put("fcst", connect(fcst));
-        map.put("version", connect(version));
-
-        return map;
-    }
-
-    public JsonArray getVilageData() throws IOException {
-        return connect(vilage);
-    }
-
-    private JsonArray connect(String fcstType) throws IOException {
+    public JsonArray connect(String fcstType) throws IOException {
 
         URL url = buildURL(fcstType);
 

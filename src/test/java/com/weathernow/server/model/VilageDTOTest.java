@@ -1,5 +1,6 @@
 package com.weathernow.server.model;
 
+import com.weathernow.server.model.dto.VilageDTO;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

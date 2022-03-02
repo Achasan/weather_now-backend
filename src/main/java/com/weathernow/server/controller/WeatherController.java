@@ -1,6 +1,6 @@
 package com.weathernow.server.controller;
 
-import com.weathernow.server.service.ForecastApiService;
+import com.weathernow.server.service.WeatherService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,12 +19,12 @@ import java.util.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/")
-public class APIController {
+public class WeatherController {
 
-    private final ForecastApiService apiService;
+    private final WeatherService apiService;
 
     @GetMapping("weather")
     public Map<String, Object> forecast() throws IOException {
-        return apiService.weatherCall();
+        return apiService.getWeather();
     }
 }

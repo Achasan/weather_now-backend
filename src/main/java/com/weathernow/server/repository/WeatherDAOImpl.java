@@ -1,62 +1,40 @@
-package com.weathernow.server.service;
+package com.weathernow.server.repository;
 
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.weathernow.server.api.WeatherAPI;
-import com.weathernow.server.model.*;
+import com.weathernow.server.model.dto.LiveDTO;
+import com.weathernow.server.model.dto.VilageDTO;
+import com.weathernow.server.model.vo.FcstVO;
+import com.weathernow.server.model.vo.NcstVO;
+import com.weathernow.server.model.vo.VersionVO;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Repository;
 
 import java.io.IOException;
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import static com.weathernow.server.api.WeatherAPI.*;
 
 @Slf4j
-@Service
-public class ForecastApiServiceImpl implements ForecastApiService {
+@Repository
+public class WeatherDAOImpl implements WeatherDAO {
+
+    private WeatherAPI api = new WeatherAPI();
 
     @Override
-    public Map<String, Object> weatherCall() throws IOException {
+    public LiveDTO getLive() throws IOException {
 
-        WeatherAPI api = new WeatherAPI();
-        Map<String, JsonArray> liveMap = api.getLiveData();
-
-        LiveDTO liveDto = parsingLive(liveMap);
-        List<VilageDTO> vilageList = parsingVilage(api.getVilageData());
-
-        Map<String, Object> weatherData = new HashMap<>();
-
-        weatherData.put("live", liveDto);
-        weatherData.put("vilage", vilageList);
-
-        return weatherData;
-    }
-
-    private LiveDTO parsingLive(Map<String, JsonArray> liveMap) {
-
-        LiveDTO dto = new LiveDTO();
-
-        Map<String, String> ncstMap = parsingNcst(liveMap.get("ncst"));
-
-        dto.setPTY(ncstMap.get("PTY"));
-        dto.setREH(ncstMap.get("REH"));
-        dto.setRN1(ncstMap.get("RN1"));
-        dto.setT1H(ncstMap.get("T1H"));
-        dto.setUUU(ncstMap.get("UUU"));
-        dto.setVEC(ncstMap.get("VEC"));
-        dto.setVVV(ncstMap.get("VVV"));
-        dto.setWSD(ncstMap.get("WSD"));
-        dto.setSKY(parsingFcst(liveMap.get("fcst")));
-        dto.setODAM(parsingVersion(liveMap.get("version")));
-
-        return dto;
-    }
-
-    private Map<String, String> parsingNcst(JsonArray jsonArray) {
+        JsonArray array = api.connect(ncst);
 
         Map<String, String> map = new HashMap<>();
-        for(int i=0; i<jsonArray.size(); i++) {
+        for(int i=0; i<array.size(); i++) {
 
-            JsonElement jsonElement = jsonArray.get(i);
+            JsonElement jsonElement = array.get(i);
 
             Gson gson = new Gson();
             NcstVO ncstVO = gson.fromJson(jsonElement, NcstVO.class);
@@ -64,16 +42,30 @@ public class ForecastApiServiceImpl implements ForecastApiService {
             map.put(ncstVO.getCategory(), ncstVO.getObsrValue());
         }
 
-        return map;
+        LiveDTO dto = new LiveDTO();
+
+        dto.setPTY(map.get("PTY"));
+        dto.setREH(map.get("REH"));
+        dto.setRN1(map.get("RN1"));
+        dto.setT1H(map.get("T1H"));
+        dto.setUUU(map.get("UUU"));
+        dto.setVEC(map.get("VEC"));
+        dto.setVVV(map.get("VVV"));
+        dto.setWSD(map.get("WSD"));
+
+        return dto;
     }
 
 
-    private String parsingFcst(JsonArray jsonArray) {
+    @Override
+    public String getSky() throws IOException {
+
+        JsonArray array = api.connect(fcst);
 
         String skyValue = null;
-        for(int i=0; i<jsonArray.size(); i++) {
+        for(int i=0; i<array.size(); i++) {
 
-            JsonElement jsonElement = jsonArray.get(i);
+            JsonElement jsonElement = array.get(i);
 
             Gson gson = new Gson();
             FcstVO fcstVO = gson.fromJson(jsonElement, FcstVO.class);
@@ -88,7 +80,24 @@ public class ForecastApiServiceImpl implements ForecastApiService {
     }
 
 
-    private List<VilageDTO> parsingVilage(JsonArray jsonArray) {
+    @Override
+    public String getVersion() throws IOException {
+
+        JsonArray array = api.connect(version);
+
+        JsonElement jsonElement = array.get(0);
+
+        Gson gson = new Gson();
+        VersionVO versionDTO = gson.fromJson(jsonElement, VersionVO.class);
+
+        return versionDTO.getVersion();
+    }
+
+
+    @Override
+    public List<VilageDTO> getVilage() throws IOException {
+
+        JsonArray array = api.connect(vilage);
 
         List<VilageDTO> voList = new ArrayList<>();
 
@@ -96,8 +105,8 @@ public class ForecastApiServiceImpl implements ForecastApiService {
 
         VilageDTO testDTO = null;
 
-        for(int i=0; i<jsonArray.size(); i++) {
-            JsonObject jsonObject = (JsonObject) jsonArray.get(i);
+        for(int i=0; i<array.size(); i++) {
+            JsonObject jsonObject = (JsonObject) array.get(i);
 
             String fcstDate = jsonObject.get("fcstDate").getAsString().substring(4);
             String fcstTimeElement = jsonObject.get("fcstTime").getAsString();
@@ -130,9 +139,9 @@ public class ForecastApiServiceImpl implements ForecastApiService {
                 }
             }
 
-            if(i != jsonArray.size() - 1) {
+            if(i != array.size() - 1) {
 
-                JsonObject nextElement = (JsonObject) jsonArray.get(i + 1);
+                JsonObject nextElement = (JsonObject) array.get(i + 1);
                 String nextFcstDate = nextElement.get("fcstDate").getAsString().substring(4);
                 String nextFcstTime = nextElement.get("fcstTime").getAsString();
 
@@ -155,16 +164,4 @@ public class ForecastApiServiceImpl implements ForecastApiService {
 
         return voList;
     }
-
-
-    private String parsingVersion(JsonArray jsonArray) {
-
-        JsonElement jsonElement = jsonArray.get(0);
-
-        Gson gson = new Gson();
-        VersionVO versionDTO = gson.fromJson(jsonElement, VersionVO.class);
-
-        return versionDTO.getVersion();
-    }
-
 }

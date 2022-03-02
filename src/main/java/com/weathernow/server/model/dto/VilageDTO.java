@@ -1,4 +1,4 @@
-package com.weathernow.server.model;
+package com.weathernow.server.model.dto;
 
 import com.weathernow.server.enumeration.VilageFcst;
 import com.weathernow.server.util.FcstValueConverter;

@@ -1,10 +1,21 @@
 package com.weathernow.server.model;
 
+import com.weathernow.server.model.vo.FcstVO;
+import com.weathernow.server.model.vo.ForecastVO;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 public class FcstVOTest {
+
+    @Test
+    @DisplayName("FcstVO_상속여부테스트")
+    public void childTest() {
+        FcstVO fcst = new FcstVO();
+
+        Assertions.assertThat(fcst).isInstanceOf(FcstVO.class);
+        Assertions.assertThat(fcst).isInstanceOf(ForecastVO.class);
+    }
 
     @Test
     @DisplayName("FcstVO_SKYConvert_테스트")
